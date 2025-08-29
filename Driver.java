@@ -100,6 +100,13 @@ public class Driver implements Directions {
 		area = width * height;
 		System.out.println("World has a width of" + width + " and a height of " + height + " and in total " + area + ".");
 
+		// First turn east
+		while (roomba.direction() != East) roomba.turnLeft();
+
+        while (roomba.frontIsClear()) {
+			roomba.move();
+			//clean the cell
+		}
 
 		return;
 
