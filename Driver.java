@@ -62,14 +62,9 @@ public class Driver implements Directions {
 		String worldName = scworldScanner.nextLine().trim();
 
 		File worldFile = new File(worldName);
-		Scanner sc_file = new Scanner(worldFile);
 		if (!worldFile.exists()) {
 			System.out.println("World file not found: " + worldName);
 			return;
-		}
-		while (sc_file.hasNextLine()) {
-			String line = sc_file.nextLine();
-			System.out.println(line);
 		}
 
 		World.readWorld(worldName);
