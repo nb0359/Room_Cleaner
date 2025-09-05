@@ -1,4 +1,3 @@
-package robot;
 import java.util.Scanner; //may be necessary for input
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -17,7 +16,8 @@ public class Driver implements Directions {
 	public static int largest_pile_size_street, largest_pile_size_ave;
 	public static Direction prev_east_west = West;
 	private static int width, height;
-	public static double area = 0.0;
+	static int minAve, maxStreet; // top-left = (maxStreet, minAve)
+	public static int area = 0;
 
 	// You will add very many variables!!
 
@@ -101,6 +101,8 @@ public class Driver implements Directions {
 			dir = West;
 
 		roomba = new Robot(start_street, start_avenue, dir, 0);
+		minAve = roomba.avenue();
+		maxStreet = roomba.street();
 
 		System.out
 				.println("Robot ready at (" + start_street + ", " + start_avenue + ") facing " + start_direction + ".");
@@ -114,8 +116,6 @@ public class Driver implements Directions {
 		width = World.numberOfAvenues();
 		height = World.numberOfStreets();
 		area = 1;
-		System.out
-				.println("World has a width of" + width + " and a height of " + height + " and in total " + area + ".");
 
 		changeDir(West);
 		cleanCell();
@@ -124,6 +124,8 @@ public class Driver implements Directions {
 			// go through current row
 			while (roomba.frontIsClear()) {
 				roomba.move();
+				minAve = Math.min(minAve, roomba.avenue());
+				maxStreet = Math.max(maxStreet, roomba.street());
 				area++;
 				cleanCell();
 			}
@@ -135,28 +137,35 @@ public class Driver implements Directions {
 				// can't go down -> finished
 				break;
 			}
-			
+
 			roomba.move();
+			minAve = Math.min(minAve, roomba.avenue());
+			maxStreet = Math.max(maxStreet, roomba.street());
 			area++;
 			cleanCell();
 
 			if (prev_east_west == West) {
 				changeDir(East);
 				prev_east_west = East;
-			}
-			else {
+			} else {
 				changeDir(West);
 				prev_east_west = West;
 			}
 		}
-		System.out.println("The area is " + area +  "square units");
+		System.out.println("The area is " + area + " square units");
 		System.out.println("The total number of piles is " + numPiles);
 		System.out.println("The total number of beepers is " + picked);
 		System.out.println("The largest pile of beepers has " + largest_pile_size + " beepers");
-		System.out.println("The largest pile (from top left corner) is right  " + (largest_pile_size_ave) + " and down " + (largest_pile_size_street));
-		System.out.println("The average pile size is  " + picked/numPiles);
-		System.out.println("The percent dirty is  " + numPiles/area );
-		
+		System.out.println("The largest pile (from top left corner) is right " + (largest_pile_size_ave - minAve)
+				+ " and down " + (maxStreet - largest_pile_size_street));
+		System.out.println("The average pile size is  " + picked / numPiles);
+		System.out.println("The percent dirty is  " + numPiles / area);
+		try {
+			Thread.sleep(200);
+		} catch (InterruptedException ignored) {
+		}
+		System.exit(0);
+
 	}
 
 	public static void changeDir(Direction dir) {
@@ -181,5 +190,5 @@ public class Driver implements Directions {
 			largest_pile_size_street = roomba.street();
 			largest_pile_size_ave = roomba.avenue();
 		}
-	}	
+	}
 }
