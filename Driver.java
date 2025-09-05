@@ -1,189 +1,204 @@
-import java.util.Scanner; //may be necessary for input
+// package robot; // ← uncomment if Driver.java is inside a `robot/` folder
+
+import java.util.Scanner;
 import java.io.File;
 import java.io.FileNotFoundException;
-
-import javax.swing.JOptionPane; //may be necessary for input
 
 import kareltherobot.*;
 
 public class Driver implements Directions {
-	// declared here so it is visible in all the methods!!
-	// It will be assigned a value in the getInfo method
-	public static Robot roomba;
-	public static int picked = 0;
-	public static double numPiles = 0.0;
-	public static int largest_pile_size = 0;
-	public static int largest_pile_size_street, largest_pile_size_ave;
-	public static Direction prev_east_west = West;
-	private static int width, height;
-	static int minAve, maxStreet; // top-left = (maxStreet, minAve)
-	public static int area = 0;
+    public static Robot roomba;
+    public static int picked = 0;
+    public static double numPiles = 0.0;
+    public static int largest_pile_size = 0;
+    public static int largest_pile_size_street, largest_pile_size_ave;
 
-	// You will add very many variables!!
+    public static Direction horizontalDir = West;  // East/West
+    public static Direction rowStepDir = South;    // (South/North)
 
-	public static void main(String[] args) throws FileNotFoundException {
-		// LEAVE THIS ALONE!!!!!!
-		Driver d = new Driver();
+    static int minAveVisited;            // westmost avenue we actually stepped on
+    static int maxStreetAtMinAveVisited; // northmost street on that *same* avenue
 
-		/**
-		 * This section of code gets info from the user in the following order: 1. Ask
-		 * the user
-		 * which world file they wish to process. Right now, that world file name is
-		 * hardcoded in. 2. Ask the user for the starting location and direction of the
-		 * Robot. A new Robot should be constructed and assigned to the global
-		 * (instance) variable named roomba that is declared on line 10.
-		 * 
-		 * An inelegant way to interact with the user is via the console, using
-		 * System.out.println and a Scanner that scans System.in (input from the
-		 * console). A more elegant way to get user input might include using a
-		 * JOptionPane.
-		 */
+    // True NW corner of the enclosure (found by WEST→NORTH probe)
+    static int topLeftAve;            
+    static int topLeftStreet;
 
-		/**
-		 * This section will have all the logic that takes the Robot to every location
-		 * and cleans up all piles of beepers. Think about ways you can break this
-		 * large, complex task into smaller, easier to solve problems.
-		 */
+    public static int area = 0;
 
-		// the line below causes a null pointer exception
-		// what is that and why are we getting it?basicRoom.
+    public static void main(String[] args) throws FileNotFoundException {
+        Scanner in = new Scanner(System.in);
 
-		/**
-		 * This method displays the results of cleaning the room. All of the info
-		 * in the pdf that describes the problem need to be displayed. You can present
-		 * this info in the console (boring) or you can present using JOptionPane
-		 * (cool!)
-		 */
+        System.out.println("Enter the world file: ");
+        String worldName = in.nextLine().trim();
 
-		// Reading the World file name
-		System.out.println("The biggest pile was ");
-		Scanner scworldScanner = new Scanner(System.in);
-		System.out.println("Enter the world file: ");
-		String worldName = scworldScanner.nextLine().trim();
+        File worldFile = new File(worldName);
+        if (!worldFile.exists()) {
+            System.out.println("World file not found: " + worldName);
+            return;
+        }
 
-		File worldFile = new File(worldName);
-		if (!worldFile.exists()) {
-			System.out.println("World file not found: " + worldName);
-			return;
-		}
+        World.readWorld(worldName);
+        World.setVisible(true);
+        World.setDelay(0); // fastest
 
-		World.readWorld(worldName);
-		World.setVisible(true);
-		World.setDelay(0); // speed
+        System.out.println("What is the start street? ");
+        int start_street = in.nextInt();
 
-		System.out.println("What is the start street? ");
-		Scanner strworldScanner = new Scanner(System.in);
-		int start_street = strworldScanner.nextInt();
-		System.out.println("The start street is: " + start_street);
+        System.out.println("What is the start avenue? ");
+        int start_avenue = in.nextInt();
 
-		System.out.println("What is the start avenue? ");
-		Scanner aveworldScanner = new Scanner(System.in);
-		int start_avenue = aveworldScanner.nextInt();
-		System.out.println("The start avenue is: " + start_avenue);
+        in.nextLine(); // consume newline
+        System.out.println("What is the start direction? ");
+        String start_direction = in.nextLine().trim();
 
-		System.out.println("What is the start direction? ");
-		Scanner dirworldScanner = new Scanner(System.in);
-		String start_direction = dirworldScanner.nextLine();
-		System.out.println("The start direction is: " + start_direction);
-		Direction dir = East;
-		if (start_direction.startsWith("N"))
-			dir = North;
-		else if (start_direction.startsWith("E"))
-			dir = East;
-		else if (start_direction.startsWith("S"))
-			dir = South;
-		else if (start_direction.startsWith("W"))
-			dir = West;
+        Direction dir = East;
+        if (start_direction.startsWith("N"))      dir = North;
+        else if (start_direction.startsWith("E")) dir = East;
+        else if (start_direction.startsWith("S")) dir = South;
+        else if (start_direction.startsWith("W")) dir = West;
 
-		roomba = new Robot(start_street, start_avenue, dir, 0);
-		minAve = roomba.avenue();
-		maxStreet = roomba.street();
+        roomba = new Robot(start_street, start_avenue, dir, 0);
 
-		System.out
-				.println("Robot ready at (" + start_street + ", " + start_avenue + ") facing " + start_direction + ".");
-		System.out.println("World File Name is: " + worldName);
+        // Initialize counters & visited-corner tracker at start cell
+        area = 1;
+        minAveVisited = roomba.avenue();
+        maxStreetAtMinAveVisited = roomba.street();
 
-		// Close scanners
-		strworldScanner.close();
-		aveworldScanner.close();
-		dirworldScanner.close();
+        // Find top left
+        computeTopLeftNW();
 
-		width = World.numberOfAvenues();
-		height = World.numberOfStreets();
-		area = 1;
+        // Start with east or west
+        changeDir(West);
+        if (roomba.frontIsClear()) {
+            horizontalDir = West;
+        } else {
+            changeDir(East);
+            horizontalDir = East;
+        }
 
-		changeDir(West);
-		cleanCell();
+        // move to south or noth
+        changeDir(South);
+        if (roomba.frontIsClear()) {
+            rowStepDir = South;
+        } else {
+            changeDir(North);
+            if (roomba.frontIsClear()) rowStepDir = North;
+            else rowStepDir = South; // dummy; we’ll break at first check if no vertical movement is possible
+        }
 
-		while (true) {
-			// go through current row
-			while (roomba.frontIsClear()) {
-				roomba.move();
-				minAve = Math.min(minAve, roomba.avenue());
-				maxStreet = Math.max(maxStreet, roomba.street());
-				area++;
-				cleanCell();
-			}
+        changeDir(horizontalDir);
+        cleanCell();
 
-			// go down
-			changeDir(South);
-			// exit if cant go down
-			if (!roomba.frontIsClear()) {
-				// can't go down -> finished
-				break;
-			}
 
-			roomba.move();
-			minAve = Math.min(minAve, roomba.avenue());
-			maxStreet = Math.max(maxStreet, roomba.street());
-			area++;
-			cleanCell();
+        // ===== Serpentine sweep =====
+        while (true) {
+            // Sweep across current row
+            changeDir(horizontalDir);
+            while (roomba.frontIsClear()) {
+                roomba.move();
+                updateVisitedCorner(); // track minAveVisited & its max street coherently
+                area++;
+                cleanCell();
+            }
 
-			if (prev_east_west == West) {
-				changeDir(East);
-				prev_east_west = East;
-			} else {
-				changeDir(West);
-				prev_east_west = West;
-			}
-		}
-		System.out.println("The area is " + area + " square units");
-		System.out.println("The total number of piles is " + numPiles);
-		System.out.println("The total number of beepers is " + picked);
-		System.out.println("The largest pile of beepers has " + largest_pile_size + " beepers");
-		System.out.println("The largest pile (from top left corner) is right " + (largest_pile_size_ave - minAve)
-				+ " and down " + (maxStreet - largest_pile_size_street));
-		System.out.println("The average pile size is  " + picked / numPiles);
-		System.out.println("The percent dirty is  " + numPiles / area);
-		try {
-			Thread.sleep(200);
-		} catch (InterruptedException ignored) {
-		}
-		System.exit(0);
+            // Step exactly one row in the fixed vertical direction
+            changeDir(rowStepDir);
+            if (!roomba.frontIsClear()) {
+                break; // done — no next row in this direction
+            }
+            roomba.move();
+            updateVisitedCorner();
+            area++;
+            cleanCell();
 
-	}
+            // Reverse horizontal direction for the next row
+            horizontalDir = (horizontalDir == West) ? East : West;
+        }
 
-	public static void changeDir(Direction dir) {
-		while (roomba.direction() != dir) {
-			roomba.turnLeft();
-		}
-	}
+        // ===== Summary =====
+        System.out.println("The area is " + area + " square units");
+        System.out.println("The total number of piles is " + (int)numPiles);
+        System.out.println("The total number of beepers is " + picked);
 
-	public static void cleanCell() {
-		int current_pile_size = 0;
+        
+        System.out.println("The largest pile of beepers has " + largest_pile_size + " beepers");
+        System.out.println("Largest pile absolute: (street=" + largest_pile_size_street +
+                               ", ave=" + largest_pile_size_ave + ")");
 
-		while (roomba.nextToABeeper()) {
-			picked++;
-			current_pile_size++;
-			roomba.pickBeeper();
-		}
-		if (current_pile_size >= 1) {
-			numPiles++;
-		}
-		if (current_pile_size > largest_pile_size) {
-			largest_pile_size = current_pile_size;
-			largest_pile_size_street = roomba.street();
-			largest_pile_size_ave = roomba.avenue();
-		}
-	}
+            
+        int right = largest_pile_size_ave - topLeftAve;
+        int down  = topLeftStreet - largest_pile_size_street;
+        System.out.println("The largest pile (from top left corner) is right " + right + " and down " + down);
+
+        System.out.println("The average pile size " + picked/numPiles);
+        System.out.println("The percent dirty is " + numPiles/area);
+
+        // error during exit
+		try { Thread.sleep(150); } catch (InterruptedException ignored) {}
+        System.exit(0);
+    }
+
+    
+    // keep turning till we get desired direction
+    public static void changeDir(Direction dir) {
+        while (roomba.direction() != dir) {
+            roomba.turnLeft();
+        }
+    }
+
+    
+    public static void cleanCell() {
+        int current_pile_size = 0;
+        while (roomba.nextToABeeper()) {
+            picked++;
+            current_pile_size++;
+            roomba.pickBeeper();
+        }
+        if (current_pile_size >= 1) {
+            numPiles++;
+        }
+        if (current_pile_size > largest_pile_size) {
+            largest_pile_size = current_pile_size;
+            largest_pile_size_street = roomba.street();
+            largest_pile_size_ave = roomba.avenue();
+        }
+    }
+
+    
+     //  minAveVisited = westmost avenue reached,
+     //  maxStreetAtMinAveVisited = northmost street on that same avenue
+    static void updateVisitedCorner() {
+        int a = roomba.avenue();
+        int s = roomba.street();
+
+        if (a < minAveVisited) {
+            minAveVisited = a;
+            maxStreetAtMinAveVisited = s;     
+        } else if (a == minAveVisited && s > maxStreetAtMinAveVisited) {
+            maxStreetAtMinAveVisited = s;
+        }
+    }
+
+    // Find the true NW corner of the current enclosure: go WEST to a wall, then NORTH to a wall; return to start. */
+    static void computeTopLeftNW() {
+        int s0 = roomba.street();
+        int a0 = roomba.avenue();
+
+        changeDir(West);
+        while (roomba.frontIsClear()) roomba.move();
+        int westAve = roomba.avenue();  // true local west boundary for this enclosure
+
+        changeDir(North);
+        while (roomba.frontIsClear()) roomba.move();
+        int northStreet = roomba.street(); // true local north boundary
+
+        topLeftAve = westAve;
+        topLeftStreet = northStreet;
+
+        changeDir(South);
+        while (roomba.street() > s0 && roomba.frontIsClear()) roomba.move();
+        changeDir(East);
+        while (roomba.avenue() < a0 && roomba.frontIsClear()) roomba.move();
+
+    }
 }
