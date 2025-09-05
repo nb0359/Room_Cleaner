@@ -16,10 +16,10 @@ public class Driver implements Directions {
 	public static Direction horizontalDir = West; // East/West
 	public static Direction rowStepDir = South; // (South/North)
 
-	static int minAveVisited; // westmost avenue we actually stepped on
+	static int minAveVisited; // westmost avenue visited
 	static int maxStreetAtMinAveVisited; // northmost street on that *same* avenue
 
-	// True NW corner of the enclosure (found by WEST→NORTH probe)
+	// True NW corner
 	static int topLeftAve;
 	static int topLeftStreet;
 
@@ -47,7 +47,7 @@ public class Driver implements Directions {
 		System.out.println("What is the start avenue? ");
 		int start_avenue = in.nextInt();
 
-		in.nextLine(); // consume newline
+		in.nextLine();
 		System.out.println("What is the start direction? ");
 		String start_direction = in.nextLine().trim();
 
@@ -87,7 +87,7 @@ public class Driver implements Directions {
 			if (roomba.frontIsClear())
 				rowStepDir = North;
 			else
-				rowStepDir = South; // dummy; we’ll break at first check if no vertical movement is possible
+				rowStepDir = South;
 		}
 
 		changeDir(horizontalDir);
@@ -121,7 +121,7 @@ public class Driver implements Directions {
 			}
 		}
 
-		// ===== Summary =====
+		// Stats
 		System.out.println("The area is " + area + " square units");
 		System.out.println("The total number of piles is " + (int) numPiles);
 		System.out.println("The total number of beepers is " + picked);
