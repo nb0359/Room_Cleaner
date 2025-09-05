@@ -125,8 +125,6 @@ public class Driver implements Directions {
 		System.out.println("The total number of beepers is " + picked);
 
 		System.out.println("The largest pile of beepers has " + largest_pile_size + " beepers");
-		System.out.println("Largest pile absolute: (street=" + largest_pile_size_street +
-				", ave=" + largest_pile_size_ave + ")");
 
 		int right = largest_pile_size_ave - topLeftAve;
 		int down = topLeftStreet - largest_pile_size_street;
@@ -209,4 +207,5 @@ public class Driver implements Directions {
 
 	}
 }
+
 
