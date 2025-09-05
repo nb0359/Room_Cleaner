@@ -1,5 +1,3 @@
-// package robot; // ← uncomment if Driver.java is inside a `robot/` folder
-
 import java.util.Scanner;
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -211,3 +209,4 @@ public class Driver implements Directions {
 
 	}
 }
+
