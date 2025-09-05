@@ -24,6 +24,7 @@ public class Driver implements Directions {
 	public static int area = 0;
 
 	public static void main(String[] args) throws FileNotFoundException {
+		// Read inputs start
 		Scanner in = new Scanner(System.in);
 
 		System.out.println("Enter the world file: ");
@@ -37,7 +38,7 @@ public class Driver implements Directions {
 
 		World.readWorld(worldName);
 		World.setVisible(true);
-		World.setDelay(0); // fastest
+		World.setDelay(0); // speed, fastest is 0
 
 		System.out.println("What is the start street? ");
 		int start_street = in.nextInt();
@@ -48,6 +49,7 @@ public class Driver implements Directions {
 		in.nextLine();
 		System.out.println("What is the start direction? ");
 		String start_direction = in.nextLine().trim();
+		// Read inputs complete
 
 		Direction dir = East;
 		if (start_direction.startsWith("N"))
@@ -207,5 +209,6 @@ public class Driver implements Directions {
 
 	}
 }
+
 
 
